@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Crear Cover</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <style>
+    body {
+      background-color: #f8f1e4;
+      font-family: 'Georgia', serif;
+      color: #4a3b2d;
+      padding: 2rem;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-section {
+      background-color: #fff7ea;
+      border: 1px solid #e0d1b7;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+
+    select, input[type="text"], input[type="number"], input[type="file"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #d8c4a8;
+      border-radius: 5px;
+      background-color: #fffdf9;
+      font-family: 'Georgia', serif;
+    }
+
+    .stock-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stock-btn {
+      padding: 0.3rem 0.8rem;
+      font-size: 1.2rem;
+      border: none;
+      background-color: #dbc3a3;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .stock-btn:hover {
+      background-color: #c0a983;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background-color: #f9f3e5;
+      padding: 0.4rem 0.6rem;
+      border-radius: 5px;
+      border: 1px solid #e3d2b6;
+    }
+
+    .submit-btn {
+      background-color: #4a3b2d;
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
+
+    .submit-btn:hover {
+      background-color: #2f251b;
+    }
+
+    .mensaje {
+      margin-top: 1rem;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-section" x-data="adminApp()" x-init="init">
+
+    <h2>Crear nuevo Cover</h2>
+
+    <label>Modelo del teléfono:</label>
+    <select x-model="modeloSeleccionado">
+      <template x-for="modelo in modelos" :key="modelo.id">
+        <option :value="modelo.id" x-text="modelo.nombre"></option>
+      </template>
+    </select>
+
+    <label>Nombre del cover:</label>
+    <input type="text" x-model="nombre" placeholder="Ej: Marble Rose Gold">
+
+    <label>Precio:</label>
+    <input type="number" x-model="precio" step="0.01" placeholder="Ej: 12.99">
+
+    <label>Stock:</label>
+    <div class="stock-control">
+      <button type="button" class="stock-btn" @click="stock = Math.max(0, stock - 1)">−</button>
+      <input type="number" x-model="stock" min="0" style="width: 70px; text-align: center;">
+      <button type="button" class="stock-btn" @click="stock++">+</button>
+    </div>
+
+    <label>Imagen:</label>
+    <input type="file" @change="handleImageUpload">
+
+    <label>Ocasiones (categorías):</label>
+    <div class="checkbox-group">
+      <template x-for="ocasion in ocasiones" :key="ocasion.id">
+        <label class="checkbox-item">
+          <input type="checkbox" :value="ocasion.id" x-model="ocasionesSeleccionadas">
+          <span x-text="ocasion.nombre"></span>
+        </label>
+      </template>
+    </div>
+
+    <button class="submit-btn" @click="crearCover">Crear Cover</button>
+
+    <div class="mensaje" x-show="mensaje" x-text="mensaje"></div>
+
+  </div>
+
+  <script>
+    function adminApp() {
+      return {
+        modelos: [],
+        modeloSeleccionado: '',
+        nombre: '',
+        precio: '',
+        stock: 1,
+        imagen: null,
+        ocasiones: [],
+        ocasionesSeleccionadas: [],
+        mensaje: '',
+
+        init() {
+          this.cargarModelos();
+          this.cargarOcasiones();
+        },
+
+        cargarModelos() {
+          fetch('http://localhost:5000/api/modelos')
+            .then(res => res.json())
+            .then(data => {
+              this.modelos = data;
+              if (data.length > 0) {
+                this.modeloSeleccionado = data[0].id;
+              }
+            });
+        },
+
+        cargarOcasiones() {
+          fetch('http://localhost:5000/api/ocasiones')
+            .then(res => res.json())
+            .then(data => {
+              this.ocasiones = data;
+            });
+        },
+
+        handleImageUpload(event) {
+          this.imagen = event.target.files[0];
+        },
+
+        crearCover() {
+          if (!this.nombre || !this.precio || !this.stock || !this.imagen || !this.modeloSeleccionado) {
+            alert('Todos los campos son obligatorios');
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('nombre', this.nombre);
+          formData.append('precio', this.precio);
+          formData.append('stock', this.stock);
+          formData.append('modelo_id', this.modeloSeleccionado);
+          formData.append('imagen', this.imagen);
+          formData.append('ocasiones', JSON.stringify(this.ocasionesSeleccionadas)); // <-- Enviar como array
+
+          fetch('http://localhost:5000/api/covers', {
+            method: 'POST',
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            this.mensaje = 'Cover creado correctamente';
+            this.nombre = '';
+            this.precio = '';
+            this.stock = 1;
+            this.imagen = null;
+            this.ocasionesSeleccionadas = [];
+          })
+          .catch(err => {
+            console.error('Error al subir cover:', err);
+            alert('Error al crear cover');
+          });
+        }
+      }
+    }
+  </script>
+</body>
+</html>

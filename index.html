@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catálogo iPhone Minimalista</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+</head>
+<body>
+
+  <div x-data="shopApp()" x-init="init()">
+
+    <h1 style="text-align: center;">Shop</h1>
+    <nav class="vintage-nav">
+      <li @click="cambiarCategoria('cover')">Covers</li>
+      <li @click="cambiarCategoria('sticker')">Stickers</li>
+      <li @click="cambiarCategoria('accesorio')">Accesorios</li>
+      <li @click="cambiarCategoria('finding')">Findings</li>
+    </nav>
+
+    <!-- Covers -->
+    <div x-show="categoria === 'cover'" class="section">
+      <h2 style="text-align: center;">COVERS</h2>
+      <div class="filtros-container">
+    <div class="filtro">
+      <label for="modelo-select" class="filtro-label">Modelo</label>
+      <select id="modelo-select" x-model="modeloSeleccionado" @change="onModeloChange()" class="filtro-select">
+        <template x-for="modelo in modelos" :key="modelo.id">
+          <option :value="modelo.id" x-text="modelo.nombre"></option>
+        </template>
+      </select>
+    </div>
+
+    <div class="filtro">
+      <label for="ocasion-select" class="filtro-label">Ocasión</label>
+      <select x-model="ocasionSeleccionada" @change="onModeloChange()">
+        <option value="">Todas</option>
+        <template x-for="ocasion in ocasiones" :key="ocasion.id">
+          <option :value="ocasion.id" x-text="ocasion.nombre"></option>
+        </template>
+      </select>
+    </div>
+  </div>
+
+  
+
+    <div class="grid">
+      <template x-for="(cover, index) in coversFiltrados" :key="index" >
+        <div class="item" @click="abrirModal(cover)">
+          <img :src="cover.imagen" alt="Cover iPhone" class="cover-img" />
+          <div x-show="cover.stock === 0" class="sold-out">Sold Out</div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Stickers -->
+  <div x-show="categoria === 'sticker'" class="section">
+    <div class=" grid-sticker">
+      <template x-for="(sticker, index) in stickers" :key="index">
+        <div class="sticker" @click="abrirModal(sticker)">
+          <img :src="sticker.imagen" alt="Sticker" class="cover-img" />
+         
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Modal común -->
+  <template x-if="mostrarModal">
+    <div class="modal-bg" @click.self="cerrarModal"   x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 scale-95"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-95">
+      <div class="modal-content">
+        <div class="modal-iphone">
+        <img :src="imagenSeleccionada" alt="Cover seleccionado" class="modal-cover-img" />
+        <div 
+          x-show="productoSeleccionado && productoSeleccionado.stock === 0" 
+          class="sold-out-modal"
+        >
+          SOLD OUT
+        </div>
+      </div>
+        
+        <div x-show="productoSeleccionado && productoSeleccionado.precio !== undefined" class="cover-price">
+          $<span x-text="Number(productoSeleccionado.precio).toFixed(2)"></span>
+        </div>
+        <div class="modal-buttons">
+          <button
+            class="btn btn-primary"
+            @click="pedir()"
+            :disabled="productoSeleccionado.stock === 0"
+            x-text="productoSeleccionado.stock === 0 ? 'Sold Out' : 'Pedir'">
+          </button>
+          <button class="btn btn-secondary" @click="cerrarModal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function shopApp() {
+  return {
+    categoria: 'cover',
+
+    cargandoCovers: false,
+    // Covers
+    modelos: [],
+    modeloSeleccionado: '',
+    covers: [],
+    ocasiones: [],
+    ocasionSeleccionada: '',
+
+    // Otros productos
+    stickers: [],
+    accesorios: [],
+    findings: [],
+
+    productoSeleccionado: null,
+    mostrarModal: false,
+    imagenSeleccionada: '',
+
+    get coversFiltrados() {
+      // Si quieres algún filtro extra, aquí va
+      return this.covers;
+    },
+
+    cambiarCategoria(cat) {
+      this.categoria = cat;
+
+      // Cargar datos según categoría
+      if (cat === 'cover') {
+        this.cargarModelos();
+        this.cargarCovers();
+      } else if (cat === 'sticker') {
+        this.cargarStickers();
+      } else if (cat === 'accesorio') {
+        this.cargarAccesorios();
+      } else if (cat === 'finding') {
+        this.cargarFindings();
+      }
+    },
+
+    cargarOcasiones() {
+        // Si hay un modelo seleccionado, cargar ocasiones con cantidad
+        let url = 'http://localhost:5000/api/ocasiones';
+        if (this.modeloSeleccionado) {
+          url = `http://localhost:5000/api/ocasiones/con-cantidad/${this.modeloSeleccionado}`;
+        }
+
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              this.ocasiones = data.map(o => ({
+                id: o.id,
+                nombre: `${o.nombre} (${o.cantidad})`
+              }));
+            } else {
+              console.error('Respuesta inesperada del servidor:', data);
+              this.ocasiones = [];
+            }
+          })
+          .catch(err => {
+        console.error('Error al cargar covers:', err);
+          })
+          .finally(() => {
+            this.cargandoCovers = false;
+          });
+          
+      },
+
+    init() {
+      this.cargarModelos();
+      this.cargarOcasiones(); // Esta ya detecta si hay modelo seleccionado
+      this.cambiarCategoria(this.categoria);
+    },
+
+    onModeloChange() {
+      this.cargarOcasiones();
+      this.cargarCovers();
+    },
+
+    cargarModelos() {
+    fetch('http://localhost:5000/api/modelos')
+      .then(res => res.json())
+      .then(data => {
+        this.modelos = data;
+        if (data.length > 0) {
+          this.modeloSeleccionado = data[0].id;  // ✅ Establece  el ID, no el objeto
+          this.cargarOcasiones(); // ✅ ya incluye cantidades si hay modelo
+          this.cargarCovers();                   // ✅ Llama inmediatamente después
+         
+        }
+    });
+},
+
+    cargarCovers() {
+  if (!this.modeloSeleccionado) return;
+
+      
+  this.cargandoCovers = true;  // Activar loading
+
+
+  let url = `http://localhost:5000/api/covers?modelo_id=${encodeURIComponent(this.modeloSeleccionado)}`;
+  if (this.ocasionSeleccionada) {
+    url += `&ocasion_id=${encodeURIComponent(this.ocasionSeleccionada)}`;
+  }
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      this.covers = data;
+      console.log(data);
+    })
+    .catch(err => {
+      console.error('Error al cargar covers:', err);
+    });
+},
+
+    cargarStickers() {
+      fetch('http://localhost:5000/api/productos?tipo=sticker')
+        .then(res => res.json())
+        .then(data => {
+          this.stickers = data;
+        });
+    },
+
+    cargarAccesorios() {
+      fetch('http://localhost:5000/api/productos?tipo=accesorio')
+        .then(res => res.json())
+        .then(data => {
+          this.accesorios = data;
+        });
+    },
+
+    cargarFindings() {
+      fetch('http://localhost:5000/api/productos?tipo=finding')
+        .then(res => res.json())
+        .then(data => {
+          this.findings = data;
+        });
+    },
+
+    abrirModal(producto) {
+      this.productoSeleccionado = producto;
+      this.imagenSeleccionada = producto.imagen;
+      this.mostrarModal = true;
+    },
+
+    cerrarModal() {
+      this.mostrarModal = false;
+      this.productoSeleccionado = null;
+      this.imagenSeleccionada = '';
+    },
+
+    pedir() {
+      if (this.productoSeleccionado.stock > 0 || this.productoSeleccionado.stock === undefined) {
+        alert(`Has pedido: ${this.productoSeleccionado.nombre || 'producto'}`);
+        this.cerrarModal();
+      } else {
+        alert('No puedes pedir, está agotado.');
+      }
+    }
+  }
+}
+</script>
+
+
+</body>
+</html>
