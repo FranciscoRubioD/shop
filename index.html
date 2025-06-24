@@ -8,22 +8,38 @@
 
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
+   <!-- ... tus otros meta y styles ... -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
 </head>
 <body>
 
   <div x-data="shopApp()" x-init="init()">
 
     <h1 style="text-align: center;">Shop</h1>
-    <nav class="vintage-nav">
+    <!-- <nav class="vintage-nav">
       <li @click="cambiarCategoria('cover')">Covers</li>
       <li @click="cambiarCategoria('sticker')">Stickers</li>
       <li @click="cambiarCategoria('accesorio')">Accesorios</li>
       <li @click="cambiarCategoria('finding')">Findings</li>
-    </nav>
+    </nav> -->
+
+    <div style="text-align: center; margin-top: 2rem; font-size: 1.5rem;">
+    <a href="" target="_blank" style="margin: 0 10px; color: #ffffff; text-decoration: none;">
+      <i class="fab fa-instagram"></i>
+    </a>
+    <a href="https://wa.me/507XXXXXXXX" target="_blank" style="margin: 0 10px; color: #ffffff; text-decoration: none;">
+      <i class="fab fa-whatsapp"></i>
+    </a>
+    <a href="https://www.tiktok.com/@TU_USUARIO" target="_blank" style="margin: 0 10px; color: #ffffff;">
+      <i class="fab fa-tiktok"></i>
+    </a>
+</div>
 
     <!-- Covers -->
     <div x-show="categoria === 'cover'" class="section">
-      <h2 style="text-align: center;">COVERS</h2>
+      <!-- <h2 style="text-align: center;">COVERS</h2> -->
       <div class="filtros-container">
     <div class="filtro">
       <label for="modelo-select" class="filtro-label">Modelo</label>
@@ -45,12 +61,25 @@
     </div>
   </div>
 
-  
 
     <div class="grid">
+      <div  x-show="!cargando && coversFiltrados.length === 0" class="no-results">
+      <p style="text-align: center; font-size: 16px; color: #666; margin-top: 2rem;">
+        Nada por aquí... por ahora.
+      </p>
+    </div>
+
+    <div 
+      x-show="cargando"
+      class="loading-message"
+    >
+      <p style="text-align: center; font-size: 16px; color: #aaa; margin-top: 2rem;">
+        ⏳ Cargando covers...
+      </p>
+    </div>
       <template x-for="(cover, index) in coversFiltrados" :key="index" >
         <div class="item" @click="abrirModal(cover)">
-          <img :src="cover.imagen" alt="Cover iPhone" class="cover-img" />
+          <img :src="`http://localhost:5000/img/${cover.imagen}`" alt="Cover iPhone" class="cover-img" />
           <div x-show="cover.stock === 0" class="sold-out">Sold Out</div>
         </div>
       </template>
@@ -77,9 +106,9 @@
     x-transition:leave="transition ease-in duration-200"
     x-transition:leave-start="opacity-100 scale-100"
     x-transition:leave-end="opacity-0 scale-95">
-      <div class="modal-content">
+      <div class="modal-content">   
         <div class="modal-iphone">
-        <img :src="imagenSeleccionada" alt="Cover seleccionado" class="modal-cover-img" />
+        <img :src="`http://localhost:5000/img/${imagenSeleccionada}`"  alt="Cover seleccionado" class="modal-cover-img" />
         <div 
           x-show="productoSeleccionado && productoSeleccionado.stock === 0" 
           class="sold-out-modal"
@@ -111,13 +140,14 @@ function shopApp() {
   return {
     categoria: 'cover',
 
-    cargandoCovers: false,
+    cargando: true, // ← se inicia como "cargando"
     // Covers
     modelos: [],
     modeloSeleccionado: '',
     covers: [],
     ocasiones: [],
     ocasionSeleccionada: '',
+
 
     // Otros productos
     stickers: [],
@@ -197,6 +227,7 @@ function shopApp() {
         if (data.length > 0) {
           this.modeloSeleccionado = data[0].id;  // ✅ Establece  el ID, no el objeto
           this.cargarOcasiones(); // ✅ ya incluye cantidades si hay modelo
+          
           this.cargarCovers();                   // ✅ Llama inmediatamente después
          
         }
@@ -204,27 +235,30 @@ function shopApp() {
 },
 
     cargarCovers() {
-  if (!this.modeloSeleccionado) return;
+      if (!this.modeloSeleccionado) return;
 
-      
-  this.cargandoCovers = true;  // Activar loading
+          
+       this.cargando = true;
+        this.covers = []; // 🔁 Vacía para que el loader/mensaje aparezca
 
 
-  let url = `http://localhost:5000/api/covers?modelo_id=${encodeURIComponent(this.modeloSeleccionado)}`;
-  if (this.ocasionSeleccionada) {
-    url += `&ocasion_id=${encodeURIComponent(this.ocasionSeleccionada)}`;
-  }
+      let url = `http://localhost:5000/api/covers?modelo_id=${encodeURIComponent(this.modeloSeleccionado)}`;
+      if (this.ocasionSeleccionada) {
+        url += `&ocasion_id=${encodeURIComponent(this.ocasionSeleccionada)}`;
+      }
 
-  fetch(url)
-    .then(res => res.json())
-    .then(data => {
-      this.covers = data;
-      console.log(data);
-    })
-    .catch(err => {
-      console.error('Error al cargar covers:', err);
-    });
-},
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          setTimeout(() => {
+            this.covers = data;
+            this.cargando = false;
+          }, 500); // ⏱ espera 500 ms antes de mostrar
+        })
+        .catch(err => {
+          console.error('Error al cargar covers:', err);
+        });
+      },
 
     cargarStickers() {
       fetch('http://localhost:5000/api/productos?tipo=sticker')

@@ -6,31 +6,38 @@
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <style>
     body {
-      background-color: #f8f1e4;
-      font-family: 'Georgia', serif;
-      color: #4a3b2d;
+      background-color: #f6f6f6;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000000;
       padding: 2rem;
+    }
+
+    .eliminate-cover:hover{
+      opacity: 0.8;
     }
 
     h2 {
       font-size: 1.8rem;
-      margin-bottom: 1rem;
+      margin-bottom: 2rem;
     }
 
     .form-section {
-      background-color: #fff7ea;
-      border: 1px solid #e0d1b7;
+      background-color: #ffffff;
+      border: 1px solid #000000;
       border-radius: 8px;
       padding: 1.5rem;
       box-shadow: 0 4px 8px rgba(0,0,0,0.05);
       max-width: 700px;
       margin: 0 auto;
+      
     }
 
     label {
       display: block;
       margin-bottom: 0.5rem;
-      font-weight: bold;
+      color: rgb(91, 91, 91);
+      /* font-weight: bold; */
+      font-size: 12px;
     }
 
     select, input[type="text"], input[type="number"], input[type="file"] {
@@ -54,7 +61,7 @@
       padding: 0.3rem 0.8rem;
       font-size: 1.2rem;
       border: none;
-      background-color: #dbc3a3;
+      background-color: #000000;
       color: #fff;
       border-radius: 4px;
       cursor: pointer;
@@ -76,10 +83,10 @@
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      background-color: #f9f3e5;
+      background-color: #ffffff;
       padding: 0.4rem 0.6rem;
       border-radius: 5px;
-      border: 1px solid #e3d2b6;
+      border: 1px solid #000000;
     }
 
     .submit-btn {
@@ -105,34 +112,194 @@
   </style>
 </head>
 <body>
+
+  <div x-data="{
+
+    ventaSeleccionada: null,
+mostrarModalVenta: false,
+cantidadVenta: 1,
+precioVenta: '',
+metodoPago: 'efectivo',
+
+abrirModalVenta(cover) {
+  this.ventaSeleccionada = cover;
+  this.precioVenta = cover.precio;
+  this.cantidadVenta = 1;
+  this.metodoPago = 'efectivo';
+  this.mostrarModalVenta = true;
+},
+
+registrarVenta() {
+  if (!this.ventaSeleccionada) return;
+
+  const data = {
+    producto_id: this.ventaSeleccionada.id,
+    cantidad: this.cantidadVenta,
+    precio: this.precioVenta,
+    metodo_pago: this.metodoPago
+  };
+  console.log(data);
+
+  fetch('http://localhost:5000/api/venta', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(response => {
+    alert('Venta registrada correctamente');
+    this.mostrarModalVenta = false;
+    this.fetchCovers();  // recarga el stock actualizado
+  })
+  .catch(err => {
+    console.error('Error al registrar venta:', err);
+    alert('Error al registrar la venta');
+  });
+},
+
+
+
+
+  covers: [],
+  modelos: [],
+  modeloSeleccionado: '',
+  fetchModelos() {
+    fetch('http://localhost:5000/api/modelos')
+      .then(res => res.json())
+      .then(data => {
+        this.modelos = data;
+        if (data.length > 0) this.modeloSeleccionado = data[0].id;
+        this.fetchCovers();
+      });
+  },
+  fetchCovers() {
+    let url = 'http://localhost:5000/api/covers';
+    if (this.modeloSeleccionado) {
+      url += `?modelo_id=${this.modeloSeleccionado}`;
+    }
+    fetch(url)
+      .then(res => res.json())
+      .then(data => this.covers = data);
+  },
+  actualizarCampo(id, campo, valor) {
+    fetch(`http://localhost:5000/api/covers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campo, valor })
+    })
+    .then(res => res.json())
+    .then(() => this.fetchCovers());
+  },
+  eliminarCover(id) {
+    if (!confirm('¿Seguro que deseas eliminar este cover?')) return;
+    fetch(`http://localhost:5000/api/covers/${id}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(() => this.fetchCovers());
+  }
+}" x-init="fetchModelos()">
+
+
+  <h2 style="text-align: center;">GESTION DE COVER</h2>
+  <label for="modeloSelect">Filtrar por modelo:</label>
+<select id="modeloSelect" x-model="modeloSeleccionado" @change="fetchCovers">
+  <option value="">-- Selecciona un modelo --</option>
+  <template x-for="modelo in modelos" :key="modelo.id">
+    <option :value="modelo.id" x-text="modelo.nombre"></option>
+  </template>
+</select>
+  <table style="margin:auto; background-color: white; color: black; width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 12px; margin-bottom: 100px; border: 1px solid rgb(226, 226, 226); border-color: rgb(241, 241, 255); " border="1"  cellpadding="10" cellspacing="0">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Stock</th>
+        <th>Precio (dolares)</th>
+        <th>Acciones</th>
+        <th>Cover</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="cover in covers" :key="cover.id">
+        <tr style="text-align: center; ">
+          <td x-text="cover.id"></td>
+          <td x-text="cover.producto_nombre"></td>
+          <td style="overflow: hidden; padding: 15px;">
+            <input type="number" :value="cover.stock"
+                   @change="actualizarCampo(cover.id, 'stock', $event.target.value)" style="width: 50%; margin: 0; padding: 5px 0px 5px 6px; text-align: center;" />
+          </td>
+          <td style="overflow: hidden; padding: 15px;">
+            <input type="number" step="0.01" :value="cover.precio"
+                   @change="actualizarCampo(cover.id, 'precio', $event.target.value)" style="width: 50%; margin: 0; padding: 5px 0px 5px 6px; text-align: center;"  />
+          </td>
+          <td>
+            <button @click="eliminarCover(cover.id)" style="padding: 15px; background-color: rgb(206, 1, 1); color: white; border: none; cursor: pointer; border-radius: 5px;" class="eliminate-cover">Eliminar</button>
+            <button @click="abrirModalVenta(cover)" style="padding: 15px; background-color: rgb(4, 124, 0); color: white; border: none; cursor: pointer; border-radius: 5px;" class="eliminate-cover">Vender</button>
+          </td>
+          <td style="display: flex;
+          align-items: center; justify-content: center;">
+            <img style="width: 90px; height: 90px; object-fit: contain;" :src="`http://localhost:5000/img/${cover.imagen}`" alt="">
+          </td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+
+
+  <div x-show="mostrarModalVenta" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+  <div style="background-color: white; padding: 20px; border-radius: 10px; width: 300px;  margin-top: 20px; margin-left: 40px;">
+    <h3 style="margin-bottom: 10px;">Registrar venta</h3>
+    <p><strong x-text="ventaSeleccionada?.producto_nombre"></strong></p>
+
+    <label>Cantidad</label>
+    <input type="number" x-model="cantidadVenta" min="1" style="width: 90%; margin-bottom: 10px;">
+
+    <label>Precio de venta</label>
+    <input type="number" x-model="precioVenta" step="0.01" style="width: 90%; margin-bottom: 10px;">
+
+    <label>Método de pago</label>
+    <select x-model="metodoPago" style="width: 95%; margin-bottom: 15px;">
+      <option value="yappy">Yappy</option>
+      <option value="efectivo">Efectivo</option>
+      <option value="transferencia">Transferencia</option>
+    </select>
+
+    <button @click="registrarVenta()" style="width: 100%; background-color: green; color: white; border: none; padding: 10px; border-radius: 5px;">Confirmar venta</button>
+    <button @click="mostrarModalVenta = false" style="width: 100%; margin-top: 10px; background-color: #ccc; border: none; padding: 10px; border-radius: 5px;">Cancelar</button>
+  </div>
+</div>
+
+
+
+</div>
+
+
   <div class="form-section" x-data="adminApp()" x-init="init">
+    <h2 style="text-align: center;">Crear nuevo Cover</h2>
 
-    <h2>Crear nuevo Cover</h2>
-
-    <label>Modelo del teléfono:</label>
+    <label>Modelo del teléfono</label>
     <select x-model="modeloSeleccionado">
       <template x-for="modelo in modelos" :key="modelo.id">
         <option :value="modelo.id" x-text="modelo.nombre"></option>
       </template>
     </select>
 
-    <label>Nombre del cover:</label>
+    <label>Nombre del cover</label>
     <input type="text" x-model="nombre" placeholder="Ej: Marble Rose Gold">
 
-    <label>Precio:</label>
+    <label>Precio</label>
     <input type="number" x-model="precio" step="0.01" placeholder="Ej: 12.99">
 
-    <label>Stock:</label>
+    <label>Stock</label>
     <div class="stock-control">
       <button type="button" class="stock-btn" @click="stock = Math.max(0, stock - 1)">−</button>
-      <input type="number" x-model="stock" min="0" style="width: 70px; text-align: center;">
+      <input type="number" x-model="stock" min="0" style="width: 70px; text-align: center; margin-bottom: 0px !important; text-align: center;">
       <button type="button" class="stock-btn" @click="stock++">+</button>
     </div>
 
-    <label>Imagen:</label>
+    <label>Imagen</label>
     <input type="file" @change="handleImageUpload">
 
-    <label>Ocasiones (categorías):</label>
+    <label>Ocasiones (categorías)</label>
     <div class="checkbox-group">
       <template x-for="ocasion in ocasiones" :key="ocasion.id">
         <label class="checkbox-item">
@@ -147,6 +314,10 @@
     <div class="mensaje" x-show="mensaje" x-text="mensaje"></div>
 
   </div>
+
+
+  
+  
 
   <script>
     function adminApp() {
@@ -222,6 +393,9 @@
           });
         }
       }
+
+
+      
     }
   </script>
 </body>

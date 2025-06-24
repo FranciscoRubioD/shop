@@ -52,13 +52,6 @@
   margin-bottom: 1rem;
 }
 
-.loading-indicator {
-  font-weight: bold;
-  color: #555;
-  padding: 2rem;
-  text-align: center;
-  font-size: 1.3rem;
-}
 
 .filtro {
   display: flex;
@@ -78,7 +71,7 @@
   padding: 0.6rem 1rem;
   font-size: 1rem;
   border: none;
-  background-color: #f0e4d7;
+  background-color: white;
   font-family: 'Courier New', monospace;
   color: #222;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
@@ -87,7 +80,7 @@
 
 .filtro-select:focus {
   outline: none;
-  background-color: #e6dbc8;
+ 
 }
     select {
       display: block;
@@ -113,7 +106,7 @@ select:hover {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1.5rem;
   justify-items: center;
-  
+
   width: 80%;
   height: auto;
   
