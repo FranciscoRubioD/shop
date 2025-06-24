@@ -1,6 +1,6 @@
 db_config = {
-    'host': 'localhost',
+    'host': 'mysql',  # <--- Este es el nombre del servicio del contenedor MySQL
     'user': 'root',
-    'password': '',
+    'password': 'root',
     'database': 'covers'
 }

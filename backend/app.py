@@ -10,11 +10,12 @@ CORS(app)  # Permite que el frontend acceda al backend
 
 # Configuración conexión MySQL
 db_config = {
-    'host': 'localhost',     # Cambia si es otro host
+    'host': 'mysql',  # <--- Este es el nombre del servicio del contenedor MySQL
     'user': 'root',
-    'password': '',
+    'password': 'root',
     'database': 'covers'
 }
+
 
 # probar conexion a bd
 try:
